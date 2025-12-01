@@ -260,6 +260,8 @@ def nudenet_execute(
         output_images.append(torch.from_numpy(image).unsqueeze(0))
         segs_outputs.append(((image_height, image_width), segments))
 
+    # Impact Pack SEGS consumers expect a single tuple for single-image batches;
+    # keep batching support by returning the list only when multiple items exist.
     segs_output = (
         segs_outputs[0]
         if len(segs_outputs) == 1

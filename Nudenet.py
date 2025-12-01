@@ -192,7 +192,44 @@ def nudenet_execute(
             None, {nudenet_model["input_name"]: preprocessed_image}
         )
         detections = postprocess(outputs, resize_factor, pad_left, pad_top, min_score)
-        censored = [d for d in detections if d.get("id") not in filtered_labels]
+        visible_detections = [
+            d for d in detections if d.get("id") not in filtered_labels
+        ]
+
+        image_height, image_width = image.shape[:2]
+        segments = []
+
+        for detection in visible_detections:
+            x, y, w, h = detection["box"]
+            x1, y1, x2, y2 = (
+                max(0, x),
+                max(0, y),
+                min(image_width, x + w),
+                min(image_height, y + h),
+            )
+
+            if x2 <= x1 or y2 <= y1:
+                continue
+
+            mask_height = y2 - y1
+            mask_width = x2 - x1
+            cropped_mask = np.ones((mask_height, mask_width), dtype=np.float32)
+
+            bbox = (x1, y1, x2, y2)
+            crop_region = bbox
+            label = CLASSIDS_LABELS_MAPPING.get(detection["id"], str(detection["id"]))
+
+            segments.append(
+                SEG(
+                    cropped_image=None,
+                    cropped_mask=cropped_mask,
+                    confidence=detection["score"],
+                    crop_region=crop_region,
+                    bbox=bbox,
+                    label=label,
+                    control_net_wrapper=None,
+                )
+            )
 
         image_height, image_width = image.shape[:2]
         segments = []
@@ -232,7 +269,7 @@ def nudenet_execute(
         if block_count_scaling == "fixed":
             scaled_blocks = blocks
 
-        for d in censored:
+        for d in visible_detections:
             box = d["box"]
             x, y, w, h = box[0], box[1], box[2], box[3]
             area = image[y : y + h, x : x + w]

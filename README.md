@@ -50,7 +50,8 @@ Configure which labels to filter in the detection process.
 - Inputs:
 
     Multiple boolean toggles for each available label in LABELS_CLASSIDS_MAPPING
-    Each label can be enabled (True) or disabled (False)
+    Set a label to **True** to filter it out (excluded from SEGS and censoring);
+    leave **False** to keep it visible.
 
 - Outputs:
 

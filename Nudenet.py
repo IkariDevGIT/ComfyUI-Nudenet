@@ -192,8 +192,9 @@ def nudenet_execute(
             None, {nudenet_model["input_name"]: preprocessed_image}
         )
         detections = postprocess(outputs, resize_factor, pad_left, pad_top, min_score)
+        filtered_label_ids = set(filtered_labels)
         visible_detections = [
-            d for d in detections if d.get("id") not in filtered_labels
+            d for d in detections if d.get("id") not in filtered_label_ids
         ]
 
         image_height, image_width = image.shape[:2]
@@ -393,7 +394,8 @@ class FilteredLabel:
         """
         return {
             "required": {
-                key: ("BOOLEAN", {"default": True})
+                # `True` means the label will be filtered out of SEGS/censoring
+                key: ("BOOLEAN", {"default": False})
                 for key in LABELS_CLASSIDS_MAPPING.keys()
             }
         }
@@ -403,11 +405,11 @@ class FilteredLabel:
     CATEGORY = "Nudenet"
 
     def filter_labels(self, *args, **kwags):
-        white_list_class_ids = []
+        filtered_class_ids = []
         for label, is_filter in kwags.items():
-            if not is_filter:
-                white_list_class_ids.append(LABELS_CLASSIDS_MAPPING[label])
-        return (white_list_class_ids,)
+            if is_filter:
+                filtered_class_ids.append(LABELS_CLASSIDS_MAPPING[label])
+        return (filtered_class_ids,)
 
 
 class NudenetModelLoader:

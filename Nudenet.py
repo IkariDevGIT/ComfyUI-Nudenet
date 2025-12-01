@@ -268,7 +268,7 @@ def nudenet_execute(
         else segs_outputs
     )
 
-    return torch.cat(output_images, dim=0), segs_output
+    return torch.cat(output_images, dim=0), segs_outputs
 
 
 class ApplyNudenet:

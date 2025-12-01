@@ -232,6 +232,41 @@ def nudenet_execute(
                 )
             )
 
+        image_height, image_width = image.shape[:2]
+        segments = []
+
+        for detection in detections:
+            x, y, w, h = detection["box"]
+            x1, y1, x2, y2 = (
+                max(0, x),
+                max(0, y),
+                min(image_width, x + w),
+                min(image_height, y + h),
+            )
+
+            if x2 <= x1 or y2 <= y1:
+                continue
+
+            mask_height = y2 - y1
+            mask_width = x2 - x1
+            cropped_mask = np.ones((mask_height, mask_width), dtype=np.float32)
+
+            bbox = (x1, y1, x2, y2)
+            crop_region = bbox
+            label = CLASSIDS_LABELS_MAPPING.get(detection["id"], str(detection["id"]))
+
+            segments.append(
+                SEG(
+                    cropped_image=None,
+                    cropped_mask=cropped_mask,
+                    confidence=detection["score"],
+                    crop_region=crop_region,
+                    bbox=bbox,
+                    label=label,
+                    control_net_wrapper=None,
+                )
+            )
+
         if block_count_scaling == "fixed":
             scaled_blocks = blocks
 

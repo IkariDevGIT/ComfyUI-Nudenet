@@ -1,5 +1,7 @@
 import math
 import os
+from collections import namedtuple
+
 import cv2
 import numpy as np
 import torch
@@ -46,6 +48,19 @@ CLASSIDS_LABELS_MAPPING = {
 LABELS_CLASSIDS_MAPPING = labels_classids_mapping = {
     label: class_id for class_id, label in CLASSIDS_LABELS_MAPPING.items()
 }
+
+SEG = namedtuple(
+    "SEG",
+    [
+        "cropped_image",
+        "cropped_mask",
+        "confidence",
+        "crop_region",
+        "bbox",
+        "label",
+        "control_net_wrapper",
+    ],
+)
 
 BLOCK_COUNT_BEHAVIOURS = [
     "fixed",
@@ -150,6 +165,7 @@ def nudenet_execute(
 
     batch_size = input_images.shape[0]
     output_images = []
+    segs_outputs = []
 
     if censor_method == "image":
         assert overlay_image is not None, "overlay_image must be provided"
@@ -177,6 +193,41 @@ def nudenet_execute(
         )
         detections = postprocess(outputs, resize_factor, pad_left, pad_top, min_score)
         censored = [d for d in detections if d.get("id") not in filtered_labels]
+
+        image_height, image_width = image.shape[:2]
+        segments = []
+
+        for detection in detections:
+            x, y, w, h = detection["box"]
+            x1, y1, x2, y2 = (
+                max(0, x),
+                max(0, y),
+                min(image_width, x + w),
+                min(image_height, y + h),
+            )
+
+            if x2 <= x1 or y2 <= y1:
+                continue
+
+            mask_height = y2 - y1
+            mask_width = x2 - x1
+            cropped_mask = np.ones((mask_height, mask_width), dtype=np.float32)
+
+            bbox = (x1, y1, x2, y2)
+            crop_region = bbox
+            label = CLASSIDS_LABELS_MAPPING.get(detection["id"], str(detection["id"]))
+
+            segments.append(
+                SEG(
+                    cropped_image=None,
+                    cropped_mask=cropped_mask,
+                    confidence=detection["score"],
+                    crop_region=crop_region,
+                    bbox=bbox,
+                    label=label,
+                    control_net_wrapper=None,
+                )
+            )
 
         if block_count_scaling == "fixed":
             scaled_blocks = blocks
@@ -207,8 +258,15 @@ def nudenet_execute(
                 image = overlay(image, pasty, alpha_mask, x, y, overlay_strength)
 
         output_images.append(torch.from_numpy(image).unsqueeze(0))
+        segs_outputs.append(((image_height, image_width), segments))
 
-    return torch.cat(output_images, dim=0)
+    segs_output = (
+        segs_outputs[0]
+        if len(segs_outputs) == 1
+        else segs_outputs
+    )
+
+    return torch.cat(output_images, dim=0), segs_output
 
 
 class ApplyNudenet:
@@ -242,7 +300,14 @@ class ApplyNudenet:
             },
         }
 
-    RETURN_TYPES = ("IMAGE",)
+    RETURN_TYPES = (
+        "IMAGE",
+        "SEGS",
+    )
+    RETURN_NAMES = (
+        "image",
+        "detections",
+    )
     FUNCTION = "apply_nudenet"
     CATEGORY = "Nudenet"
 
@@ -259,7 +324,7 @@ class ApplyNudenet:
         overlay_strength: float = 1.0,
         alpha_mask: torch.Tensor = None,
     ):
-        output_image = nudenet_execute(
+        output_image, segs = nudenet_execute(
             nudenet_model=nudenet_model,
             input_images=image,
             censor_method=censor_method,
@@ -271,7 +336,7 @@ class ApplyNudenet:
             overlay_strength=overlay_strength,
             alpha_mask=alpha_mask,
         )
-        return (output_image,)
+        return (output_image, segs)
 
 
 class FilteredLabel:

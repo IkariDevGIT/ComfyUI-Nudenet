@@ -75,7 +75,8 @@ Applies NSFW content filtering to images.
 
 - Outputs:
 
-    IMAGE: Processed image with applied filtering
+    IMAGE: Processed image with applied filtering \
+    SEGS: Detection results in Impact Pack-compatible `SEGS` format for bbox/mask consumers
 
 ## Usage Example
 Using example workflow from ./example/nudenet_base_example.json

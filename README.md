@@ -50,11 +50,12 @@ Configure which labels to filter in the detection process.
 - Inputs:
 
     Multiple boolean toggles for each available label in LABELS_CLASSIDS_MAPPING
-    Each label can be enabled (True) or disabled (False)
+    Leave a label **On/True** to keep it visible; toggle **Off/False** to filter
+    it out (excluded from SEGS and censoring).
 
 - Outputs:
 
-    FILTERED_LABELS: List of enabled label class IDs for filtering
+    FILTERED_LABELS: List of label class IDs to filter out when censoring/outputting detections
 
 ## ApplyNudenet
 Applies NSFW content filtering to images.
@@ -64,7 +65,7 @@ Applies NSFW content filtering to images.
     nudenet_model (NUDENET_MODEL): Loaded NudeNet model \
     image (IMAGE): Input image to process \
     censor_method: Method for censoring detected areas \
-    filtered_labels (FILTERED_LABELS): Labels to filter from FilteredLabel node \
+    filtered_labels (FILTERED_LABELS): Labels to filter from FilteredLabel node (toggle labels ON to hide them; default OFF keeps everything) \
     min_score (FLOAT): Detection confidence threshold (0.0 - 1.0, default: 0.2) \
     blocks (INT): Number of blocks for pixelation (1 - 100, default: 3)
 
@@ -75,7 +76,8 @@ Applies NSFW content filtering to images.
 
 - Outputs:
 
-    IMAGE: Processed image with applied filtering
+    IMAGE: Processed image with applied filtering \
+    SEGS: Detection results in Impact Pack-compatible `SEGS` format for bbox/mask consumers (respects filtered labels)
 
 ## Usage Example
 Using example workflow from ./example/nudenet_base_example.json

@@ -50,8 +50,8 @@ Configure which labels to filter in the detection process.
 - Inputs:
 
     Multiple boolean toggles for each available label in LABELS_CLASSIDS_MAPPING
-    Set a label to **True** to filter it out (excluded from SEGS and censoring);
-    leave **False** to keep it visible.
+    Leave a label **On/True** to keep it visible; toggle **Off/False** to filter
+    it out (excluded from SEGS and censoring).
 
 - Outputs:
 
@@ -65,7 +65,7 @@ Applies NSFW content filtering to images.
     nudenet_model (NUDENET_MODEL): Loaded NudeNet model \
     image (IMAGE): Input image to process \
     censor_method: Method for censoring detected areas \
-    filtered_labels (FILTERED_LABELS): Labels to filter from FilteredLabel node \
+    filtered_labels (FILTERED_LABELS): Labels to filter from FilteredLabel node (toggle labels ON to hide them; default OFF keeps everything) \
     min_score (FLOAT): Detection confidence threshold (0.0 - 1.0, default: 0.2) \
     blocks (INT): Number of blocks for pixelation (1 - 100, default: 3)
 

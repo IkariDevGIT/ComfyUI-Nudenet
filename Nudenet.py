@@ -262,13 +262,16 @@ def nudenet_execute(
 
     # Impact Pack SEGS consumers expect a single tuple for single-image batches;
     # keep batching support by returning the list only when multiple items exist.
-    segs_output = (
-        segs_outputs[0]
-        if len(segs_outputs) == 1
-        else segs_outputs
-    )
+    if len(segs_outputs) == 1:
+        segs_output = segs_outputs[0]
+    elif len(segs_outputs) > 1:
+        segs_output = segs_outputs
+    else:
+        # Fallback to an empty SEGS structure instead of an empty list so
+        # SEGSPreview and other consumers can safely index segs[1].
+        segs_output = ((0, 0), [])
 
-    return torch.cat(output_images, dim=0), segs_outputs
+    return torch.cat(output_images, dim=0), segs_output
 
 
 class ApplyNudenet:
